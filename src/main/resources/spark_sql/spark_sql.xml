@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<SparkSQL>
+    <sql id="equipment_relationship_pq">
+<!--        台区找配电线-->
+        select
+        tq.tgId sbid,
+        tq.tgNo sbbm,
+        tq.tgName sbmc,
+        tq.lineName psbid,
+        "台区" sbtype,
+        tq.powerSup in_settle_pq,
+        tq.powerSal out_settle_pq
+        from
+        public_tq_dl tq
+        union all
+<!--        配电线找站-->
+        select
+        xl.lineId sbid,
+        xl.lineNo sbbm,
+        xl.lineName sbmc,
+        xl.subsName psbid,
+        "配电线路" sbtype,
+        xl.powerSup in_settle_pq,
+        xl.powerSal out_settle_pq
+        from
+        xl_10kv_dl xl
+        union all
+        <!--        站找线(10kv以上的电站)-->
+        select
+        dz.subsId sbid,
+        dz.subsNo sbbm,
+        dz.subsName sbmc,
+        xl.lineId psbid,
+        '变电站' sbtype,
+        xl.powerout in_settle_pq,
+        aa.powerin  out_settle_pq
+        from
+        node_station dz,
+        xl35_220KV_dl xl,
+        (select sum(powerin) powerin,startSubsName from xl35_220KV_dl group by startSubsName) aa
+        where
+        dz.subsId = xl.endSubsName and dz.subsId = aa.startSubsName
+        union all
+        <!--            站找线(10kv和35kv之间的站)-->
+        select
+        dz.subsId sbid,
+        dz.subsNo sbbm,
+        dz.subsName sbmc,
+        xl.lineId psbid,
+        '变电站' sbtype,
+        xl.powerout in_settle_pq,
+        aa.powerSup out_settle_pq
+        from
+        node_station dz,
+        xl35_220KV_dl xl,
+        xl_10kv_dl xl2,
+        (select sum(powerSup) powerSup,subsName from xl_10kv_dl group by subsName) aa
+        where
+        dz.subsId = xl.endSubsName and dz.subsId = aa.subsName
+        union all
+<!--        输电线找电站-->
+        select
+        xl.lineId sbid,
+        xl.lineNo sbbm,
+        xl.lineName sbmc,
+        xl.startSubsId psbid,
+        '输电线路' sbtype,
+        xl.powerin	in_settle_pq,
+        xl.powerout	out_settle_pq
+        from
+        xl35_220KV_dl xl
+    </sql>
+    <sql id="user_info">
+<!--        专变高压用户-->
+        select
+            u.CONS_NO cons_id,
+            u.CONS_NO cons_no,
+            u.CONS_NAME cons_name,
+            "02" pub_priv_flag
+            from
+            high_user_dl u
+    </sql>
+    <sql id="tq_cons_pq">
+<!--        专变高压用户-->
+        select
+        CONS_NO cons_id,
+        lineName tq_id,
+        zxPower t_settle_pq
+        from
+        high_user_dl
+    </sql>
+</SparkSQL>
